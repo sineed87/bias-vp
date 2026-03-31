@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VP Setup Analyzer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+  :root {
+    --bg:#0d0d0d;--bg2:#141414;--bg3:#1c1c1c;
+    --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);
+    --text:#e2e2e2;--text2:#777;--text3:#444;
+    --green:#4ade80;--gbg:rgba(74,222,128,0.07);--gborder:rgba(74,222,128,0.22);
+    --red:#f87171;--rbg:rgba(248,113,113,0.07);--rborder:rgba(248,113,113,0.22);
+    --blue:#60a5fa;--bbg:rgba(96,165,250,0.07);--bborder:rgba(96,165,250,0.22);
+    --amber:#fbbf24;--abg:rgba(251,191,36,0.07);--aborder:rgba(251,191,36,0.22);
+    --r:9px;--font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-weight:300;min-height:100vh;padding:1.75rem 1rem;}
+  .wrap{max-width:700px;margin:0 auto;}
+  header{display:flex;align-items:baseline;gap:10px;margin-bottom:2rem;padding-bottom:1rem;border-bottom:0.5px solid var(--border);}
+  header h1{font-size:16px;font-weight:500;}
+  header span{font-size:12px;color:var(--text3);font-family:var(--mono);}
+  .sec{margin-bottom:1rem;}
+  .lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:6px;font-family:var(--mono);}
+  .drop{border:1px dashed var(--border2);border-radius:var(--r);padding:2.5rem 1rem;text-align:center;cursor:pointer;background:var(--bg2);position:relative;transition:all 0.12s;}
+  .drop:hover,.drop.drag{border-color:rgba(255,255,255,0.25);background:var(--bg3);}
+  .drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .drop-icon{font-size:18px;margin-bottom:8px;opacity:0.35;}
+  .drop-txt{font-size:13px;color:var(--text2);}
+  .drop-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+  .prev{position:relative;border-radius:var(--r);overflow:hidden;border:0.5px solid var(--border2);}
+  .prev img{width:100%;display:block;max-height:360px;object-fit:contain;background:#000;}
+  .prev-x{position:absolute;top:7px;right:7px;background:rgba(0,0,0,0.75);color:#fff;border:0.5px solid var(--border2);border-radius:50%;width:26px;height:26px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  select,input[type=text]{width:100%;padding:8px 11px;font-size:13px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:var(--font);outline:none;}
+  select:focus,input[type=text]:focus{border-color:rgba(255,255,255,0.28);}
+  .btn{width:100%;padding:11px;font-size:13px;font-weight:500;border:0.5px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text);cursor:pointer;font-family:var(--font);transition:all 0.12s;margin-top:0.6rem;}
+  .btn:hover{background:var(--bg3);border-color:rgba(255,255,255,0.28);}
+  .btn:disabled{opacity:0.3;cursor:not-allowed;}
+  .btn-xs{width:100%;padding:8px;font-size:11px;border:0.5px solid var(--border);border-radius:var(--r);background:transparent;color:var(--text3);cursor:pointer;font-family:var(--mono);transition:all 0.12s;margin-top:0.4rem;letter-spacing:0.03em;}
+  .btn-xs:hover{background:var(--bg3);color:var(--text2);border-color:var(--border2);}
+  .btn-xs:disabled{opacity:0.3;cursor:not-allowed;}
+  .sp{display:inline-block;width:12px;height:12px;border:1.5px solid var(--border2);border-top-color:var(--text);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .err{color:var(--red);font-size:11px;margin-top:6px;font-family:var(--mono);display:none;}
+  .badge{font-size:11px;font-weight:500;padding:3px 11px;border-radius:20px;font-family:var(--mono);letter-spacing:0.05em;}
+  .b-bull{background:var(--gbg);color:var(--green);border:0.5px solid var(--gborder);}
+  .b-bear{background:var(--rbg);color:var(--red);border:0.5px solid var(--rborder);}
+  .b-neu{background:var(--bbg);color:var(--blue);border:0.5px solid var(--bborder);}
+  .bias-strip{display:none;margin-top:1rem;border-radius:var(--r);overflow:hidden;}
+  .bias-top{display:flex;align-items:center;gap:10px;padding:0.75rem 1.1rem;background:var(--bg2);border:0.5px solid var(--border);border-bottom:none;border-radius:var(--r) var(--r) 0 0;}
+  .bias-meta{font-size:11px;color:var(--text3);font-family:var(--mono);}
+  .bias-body{background:var(--bg2);border:0.5px solid var(--border);border-bottom:none;padding:1rem 1.1rem;font-size:13px;line-height:1.75;color:var(--text);white-space:pre-wrap;}
+  .fix-box{background:var(--bg2);border:0.5px solid var(--border);padding:0.75rem 1.1rem;border-radius:0 0 var(--r) var(--r);}
+  .fix-lbl{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:5px;}
+  .fix-row{display:flex;gap:7px;}
+  .fix-row input{flex:1;}
+  .fix-send{padding:8px 13px;font-size:11px;font-family:var(--mono);background:transparent;border:0.5px solid var(--border2);border-radius:var(--r);color:var(--text2);cursor:pointer;white-space:nowrap;transition:all 0.12s;}
+  .fix-send:hover{color:var(--text);border-color:rgba(255,255,255,0.28);}
+  .fix-send:disabled{opacity:0.3;cursor:not-allowed;}
+  .sc-wrap{display:none;margin-top:0.75rem;}
+  .sc-hdr{padding:0.6rem 1.1rem;background:var(--bg2);border:0.5px solid var(--border);border-bottom:none;border-radius:var(--r) var(--r) 0 0;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);font-family:var(--mono);}
+  .sc-grid{display:grid;grid-template-columns:1fr 1fr;border:0.5px solid var(--border);border-radius:0 0 var(--r) var(--r);overflow:hidden;}
+  .sc-cell{padding:1rem 1.1rem;background:var(--bg);}
+  .sc-cell:first-child{border-right:0.5px solid var(--border);}
+  .sc-tag{font-size:10px;font-weight:500;font-family:var(--mono);letter-spacing:0.07em;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:8px;}
+  .t-bull{background:var(--gbg);color:var(--green);border:0.5px solid var(--gborder);}
+  .t-bear{background:var(--rbg);color:var(--red);border:0.5px solid var(--rborder);}
+  .sc-body{font-size:12px;line-height:1.7;color:var(--text2);white-space:pre-wrap;}
+  .sent-wrap{display:none;margin-top:0.6rem;border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;}
+  .sent-top{display:flex;align-items:center;justify-content:space-between;padding:0.6rem 1.1rem;background:var(--bg2);border-bottom:0.5px solid var(--border);}
+  .sent-lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);font-family:var(--mono);}
+  .pos-bar{padding:0.5rem 1.1rem;background:var(--bg2);border-bottom:0.5px solid var(--border);}
+  .pos-labels{display:flex;justify-content:space-between;font-size:11px;font-family:var(--mono);margin-bottom:4px;}
+  .pl{color:var(--green);}
+  .ps{color:var(--red);}
+  .bar-track{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--green) 0%,var(--red) 100%);border-radius:3px;transition:width 0.5s ease;}
+  .sent-body{padding:0.85rem 1.1rem;font-size:12px;line-height:1.7;color:var(--text2);white-space:pre-wrap;background:var(--bg);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>VP Setup Analyzer</h1>
+    <span>volume profile · acceptance / rejection · day trade</span>
+  </header>
+
+  <div class="sec">
+    <div class="lbl">Posnetek grafa</div>
+    <div id="drop" class="drop">
+      <input type="file" id="fileIn" accept="image/*" />
+      <div class="drop-icon">↑</div>
+      <div class="drop-txt">Povleci graf sem ali klikni za nalaganje</div>
+      <div class="drop-sub">TradingView · ATAS · PNG · JPG</div>
+    </div>
+    <div id="prevWrap" class="prev" style="display:none;">
+      <img id="prevImg" src="" alt="graf" />
+      <button class="prev-x" onclick="clearImg()">✕</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="row2">
+      <select id="inst">
+        <option value="EURUSD">EURUSD</option>
+        <option value="BTC">Bitcoin (BTC)</option>
+        <option value="NQ">NAS100 / NQ</option>
+        <option value="ES">S&amp;P500 / ES</option>
+        <option value="GBPUSD">GBPUSD</option>
+        <option value="XAUUSD">Zlato (XAUUSD)</option>
+        <option value="iz grafa">Razberem iz grafa</option>
+      </select>
+      <select id="tf">
+        <option value="15min">15min</option>
+        <option value="30min">30min</option>
+        <option value="1H" selected>1H</option>
+        <option value="4H">4H</option>
+        <option value="Daily">Daily</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn" id="analyzeBtn" onclick="analyze()">Analiziraj setup ↗</button>
+  <div class="err" id="err"></div>
+
+  <div class="bias-strip" id="biasStrip">
+    <div class="bias-top">
+      <span class="badge" id="biasBadge"></span>
+      <span class="bias-meta" id="biasMeta"></span>
+    </div>
+    <div class="bias-body" id="biasBody"></div>
+    <div class="fix-box">
+      <div class="fix-lbl">Opazil napako? Popravi ↓</div>
+      <div class="fix-row">
+        <input type="text" id="fixInput" placeholder='npr. "POC je na 1.1520, ne 1.1540"' />
+        <button class="fix-send" id="fixBtn" onclick="reanalyze()">Popravi ↗</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sc-wrap" id="scWrap">
+    <div class="sc-hdr">Predloga setupa</div>
+    <div class="sc-grid">
+      <div class="sc-cell">
+        <span class="sc-tag t-bull">▲ Bikovni setup</span>
+        <div class="sc-body" id="scBull"></div>
+      </div>
+      <div class="sc-cell">
+        <span class="sc-tag t-bear">▼ Medvedji setup</span>
+        <div class="sc-body" id="scBear"></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-xs" id="sentBtn" style="display:none;" onclick="fetchSent()">
+    + Sentiment skupnosti X &amp; influencerji ↗
+  </button>
+  <div class="sent-wrap" id="sentWrap">
+    <div class="sent-top">
+      <span class="sent-lbl">Sentiment skupnosti</span>
+      <span class="badge" id="sentBadge" style="display:none;"></span>
+    </div>
+    <div class="pos-bar" id="posBar" style="display:none;">
+      <div class="pos-labels">
+        <span class="pl" id="posL">Nakupi 50%</span>
+        <span class="ps" id="posS">Prodaje 50%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barFill" style="width:50%;"></div></div>
+    </div>
+    <div class="sent-body" id="sentBody"></div>
+  </div>
+</div>
+
+<script>
+const VP_REF=`Volume Profile referenca:
+- HVN = sprejemanje (cena se upočasni, gravitira)
+- LVN = zavrnitev (cena hitro prečka — breakout cona)
+- POC = fair value magnet
+- VAH/VAL = meje value area; preboj+sprejem = directional signal
+- nPOC = nepreizkušen POC = močan magnet
+- Acceptance = 2+ sveči v coni → nadaljevanje
+- Rejection = hiter odboj iz cone → reversal
+- Failed Auction = preboj brez sledstva → past za traderje
+- Rotacijski dan: VAH↔VAL
+- Discovery dan: gradi novo value area v smeri trenda`;
+
+let b64=null,mime='image/png',lastAnalysis='';
+
+const drop=document.getElementById('drop'),fileIn=document.getElementById('fileIn');
+fileIn.addEventListener('change',e=>{if(e.target.files[0])load(e.target.files[0]);});
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag');});
+drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0]);});
+
+function load(f){
+  mime=f.type||'image/png';
+  const r=new FileReader();
+  r.onload=ev=>{
+    b64=ev.target.result.split(',')[1];
+    document.getElementById('prevImg').src=ev.target.result;
+    drop.style.display='none';
+    document.getElementById('prevWrap').style.display='block';
+    document.getElementById('err').style.display='none';
+  };
+  r.readAsDataURL(f);
+}
+function clearImg(){b64=null;document.getElementById('prevImg').src='';document.getElementById('prevWrap').style.display='none';drop.style.display='block';fileIn.value='';}
+function showErr(m){const e=document.getElementById('err');e.textContent=m;e.style.display='block';}
+
+async function callAPI(body){
+  const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(!res.ok||data.error){
+    const m=typeof data.error==='string'?data.error:(data.error?.message||JSON.stringify(data.error||data));
+    throw new Error(m);
+  }
+  return (data.content||[]).map(b=>b.text||'').join('')||'';
+}
+
+function setBadge(text){
+  const m=text.match(/\b(bikovni|medvedji|nevtralen|bullish|bearish|neutral)\b/i);
+  let cls='b-neu',lbl='◆ NEVTRALEN';
+  if(m){const v=m[0].toLowerCase();
+    if(v==='bikovni'||v==='bullish'){cls='b-bull';lbl='▲ BIKOVNI';}
+    else if(v==='medvedji'||v==='bearish'){cls='b-bear';lbl='▼ MEDVEDJI';}
+  }
+  document.getElementById('biasBadge').className='badge '+cls;
+  document.getElementById('biasBadge').textContent=lbl;
+}
+
+async function analyze(){
+  if(!b64){showErr('Najprej naloži posnetek grafa.');return;}
+  const inst=document.getElementById('inst').value,tf=document.getElementById('tf').value;
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=true;btn.innerHTML='<span class="sp"></span>Analiziram...';
+  ['biasStrip','scWrap','sentWrap'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('sentBtn').style.display='none';
+  document.getElementById('err').style.display='none';
+
+  const p=`${VP_REF}\n\nAnaliziraj ta ${tf} graf za ${inst} skozi VP perspektivo.\n\nIzlušči: POC, VAH, VAL, HVN/LVN cone, nPOC, tip dneva.\n\nOdgovori v 4 vrsticah:\nPRISTRANSKOST: [Bikovni/Medvedji/Nevtralen]\nVP KONTEKST: [kje je cena glede na VA + ključna VP opazka]\nMAGNET: [najbližji nPOC ali HVN]\nRAZVELJAVITEV: [en stavek]`;
+
+  try{
+    const text=await callAPI({model:'claude-sonnet-4-20250514',max_tokens:350,
+      system:'Volume profile day trader. Slovenščina. Kratko, konkretno, brez odvečnih besed.',
+      messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:p}]}]
+    });
+    lastAnalysis=text;setBadge(text);
+    document.getElementById('biasMeta').textContent=inst+' · '+tf+' · '+new Date().toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('biasBody').textContent=text;
+    document.getElementById('biasStrip').style.display='block';
+    await fetchSetups(inst,tf,text);
+    document.getElementById('sentBtn').style.display='block';
+  }catch(e){showErr('Napaka: '+e.message);}
+  btn.disabled=false;btn.innerHTML='Analiziraj setup ↗';
+}
+
+async function reanalyze(){
+  const fix=document.getElementById('fixInput').value.trim();
+  if(!fix||!b64)return;
+  const inst=document.getElementById('inst').value,tf=document.getElementById('tf').value;
+  const btn=document.getElementById('fixBtn');
+  btn.disabled=true;btn.textContent='Popravljam...';
+
+  const p=`${VP_REF}\n\nPrejšnja analiza:\n${lastAnalysis}\n\nUporabnik popravil: "${fix}"\n\nZnova v 4 vrsticah:\nPRISTRANSKOST: [Bikovni/Medvedji/Nevtralen]\nVP KONTEKST: [posodobljeno]\nMAGNET: [posodobljeno]\nRAZVELJAVITEV: [en stavek]`;
+
+  try{
+    const text=await callAPI({model:'claude-sonnet-4-20250514',max_tokens:350,
+      system:'Volume profile day trader. Slovenščina. Kratko in konkretno.',
+      messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:p}]}]
+    });
+    lastAnalysis=text;setBadge(text);
+    document.getElementById('biasBody').textContent=text;
+    document.getElementById('fixInput').value='';
+    await fetchSetups(inst,tf,text);
+  }catch(e){showErr('Napaka: '+e.message);}
+  btn.disabled=false;btn.textContent='Popravi ↗';
+}
+
+async function fetchSetups(inst,tf,analysis){
+  document.getElementById('scWrap').style.display='none';
+  const p=`${VP_REF}\n\nVP analiza ${tf} za ${inst}:\n${analysis}\n\nPredlagaj 2 VP day trade setupa. Format (brez razlag):\n\nBIKOVNI SETUP\nVstop: [VP cona + pogoj]\nSprožilec: [acceptance/rejection/failed auction]\nSL: [nivo] · TP1: [nivo] · TP2: [nivo]\nR:R: [razmerje]\n\nMEDVEDJI SETUP\nVstop: [VP cona + pogoj]\nSprožilec: [acceptance/rejection/failed auction]\nSL: [nivo] · TP1: [nivo] · TP2: [nivo]\nR:R: [razmerje]`;
+  try{
+    const text=await callAPI({model:'claude-sonnet-4-20250514',max_tokens:300,
+      system:'VP day trader. Konkretni setupa z VP logiko. Slovenščina. Brez odvečnih besed.',
+      messages:[{role:'user',content:[{type:'text',text:p}]}]
+    });
+    const bull=text.match(/BIKOVNI SETUP\n([\s\S]*?)(?=MEDVEDJI SETUP|$)/i);
+    const bear=text.match(/MEDVEDJI SETUP\n([\s\S]*?)$/i);
+    document.getElementById('scBull').textContent=bull?bull[1].trim():text;
+    document.getElementById('scBear').textContent=bear?bear[1].trim():'—';
+    document.getElementById('scWrap').style.display='block';
+  }catch(e){}
+}
+
+async function fetchSent(){
+  const inst=document.getElementById('inst').value;
+  const btn=document.getElementById('sentBtn');
+  btn.disabled=true;btn.innerHTML='<span class="sp"></span>Iščem...';
+  document.getElementById('sentWrap').style.display='none';
+  try{
+    const res=await fetch('/api/sentiment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instrument:inst})});
+    const data=await res.json();
+    if(!res.ok){showErr('Napaka: '+(data.error||res.status));return;}
+    const text=data.sentiment||'Ni podatkov.';
+    const sm=text.match(/SENTIMENT:\s*(Bikovni|Medvedji|Mešan|Bullish|Bearish|Mixed)/i);
+    const sb=document.getElementById('sentBadge');
+    if(sm){
+      const v=sm[1].toLowerCase(),isBull=v==='bikovni'||v==='bullish',isBear=v==='medvedji'||v==='bearish';
+      sb.textContent=isBull?'▲ Bikovni':isBear?'▼ Medvedji':'◆ Mešan';
+      sb.className='badge '+(isBull?'b-bull':isBear?'b-bear':'b-mix');
+      sb.style.display='inline-block';
+    }
+    const pm=text.match(/(?:Nakupi|Longs?)\s*[:\-·]?\s*(\d+)%.*?(?:Prodaje|Shorts?)\s*[:\-·]?\s*(\d+)%/i);
+    if(pm){
+      document.getElementById('posL').textContent='Nakupi '+pm[1]+'%';
+      document.getElementById('posS').textContent='Prodaje '+pm[2]+'%';
+      document.getElementById('barFill').style.width=pm[1]+'%';
+      document.getElementById('posBar').style.display='block';
+    }
+    document.getElementById('sentBody').textContent=text;
+    document.getElementById('sentWrap').style.display='block';
+  }catch(e){showErr('Napaka: '+e.message);}
+  btn.disabled=false;btn.innerHTML='+ Sentiment skupnosti X &amp; influencerji ↗';
+}
+</script>
+</body>
+</html>
